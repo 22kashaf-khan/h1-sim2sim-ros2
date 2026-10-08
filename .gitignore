@@ -1,0 +1,12 @@
+# colcon output (only appears if someone builds inside the repo by mistake)
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/
+*.swp
