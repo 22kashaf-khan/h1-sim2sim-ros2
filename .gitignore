@@ -10,3 +10,5 @@ __pycache__/
 # Editor
 .vscode/
 *.swp
+
+h1_policy/policies/h1_flat_nvidia_pretrained/
