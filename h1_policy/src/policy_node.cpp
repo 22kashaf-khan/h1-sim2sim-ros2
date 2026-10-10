@@ -24,10 +24,12 @@ public:
 
 private:
   static constexpr std::chrono::milliseconds kControlPeriod{20};
+  static constexpr std::chrono::milliseconds kStateTimeout{100};
 
   void on_joint_state(sensor_msgs::msg::JointState::ConstSharedPtr msg)
   {
     latest_joint_state_ = msg;
+    last_joint_state_time_ = now();
     RCLCPP_INFO_THROTTLE(
       get_logger(), *get_clock(), 1000,
       "received joint_states with %zu joints", msg->position.size());
@@ -40,16 +42,25 @@ private:
         get_logger(), *get_clock(), 2000, "waiting for first joint_states message");
       return;
     }
-        sensor_msgs::msg::JointState command;
+
+    const rclcpp::Duration age = now() - last_joint_state_time_;
+    if (age > rclcpp::Duration(kStateTimeout)) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 1000,
+        "joint_states is stale (%.0f ms old), not publishing", age.seconds() * 1000.0);
+      return;
+    }
+
+    sensor_msgs::msg::JointState command;
     command.header.stamp = now();
     command.name = latest_joint_state_->name;
     command.position = latest_joint_state_->position;
     joint_command_pub_->publish(command);
-
   }
 
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
   sensor_msgs::msg::JointState::ConstSharedPtr latest_joint_state_;
+  rclcpp::Time last_joint_state_time_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_command_pub_;
   rclcpp::TimerBase::SharedPtr control_timer_;
 };
