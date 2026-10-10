@@ -40,6 +40,12 @@ private:
         get_logger(), *get_clock(), 2000, "waiting for first joint_states message");
       return;
     }
+        sensor_msgs::msg::JointState command;
+    command.header.stamp = now();
+    command.name = latest_joint_state_->name;
+    command.position = latest_joint_state_->position;
+    joint_command_pub_->publish(command);
+
   }
 
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
