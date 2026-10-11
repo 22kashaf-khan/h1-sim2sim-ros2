@@ -39,4 +39,13 @@ install(TARGETS policy_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+
+  ament_add_gtest(test_onnx_policy test/test_onnx_policy.cpp)
+  target_link_libraries(test_onnx_policy onnxruntime::onnxruntime)
+  target_compile_definitions(test_onnx_policy PRIVATE
+    POLICY_DIR="${CMAKE_CURRENT_SOURCE_DIR}/policies/h1_flat_baseline")
+endif()
+
 ament_package()
