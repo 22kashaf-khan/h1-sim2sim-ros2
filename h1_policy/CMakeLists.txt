@@ -11,6 +11,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 set(ONNXRUNTIME_ROOT "$ENV{HOME}/libs/onnxruntime-linux-x64-1.31.0"
   CACHE PATH "Folder of the ONNX Runtime C++ release")
@@ -43,7 +44,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
   ament_add_gtest(test_onnx_policy test/test_onnx_policy.cpp)
-  target_link_libraries(test_onnx_policy onnxruntime::onnxruntime)
+  target_link_libraries(test_onnx_policy onnxruntime::onnxruntime yaml-cpp::yaml-cpp)
   target_compile_definitions(test_onnx_policy PRIVATE
     POLICY_DIR="${CMAKE_CURRENT_SOURCE_DIR}/policies/h1_flat_baseline")
 endif()
