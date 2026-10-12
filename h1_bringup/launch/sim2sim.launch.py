@@ -18,11 +18,12 @@ def launch_setup(context):
     policy = LaunchConfiguration("policy").perform(context)
     torque_limits = LaunchConfiguration("torque_limits").perform(context)
     scene = LaunchConfiguration("scene").perform(context)
+    log_file = LaunchConfiguration("log_file").perform(context)
 
     policy_dir = os.path.join(get_package_share_directory("h1_policy"), "policies", policy)
     deploy_path = os.path.join(policy_dir, "deploy.yaml")
 
-    bridge_params = {"scene": scene, "deploy_config": deploy_path}
+    bridge_params = {"scene": scene, "deploy_config": deploy_path, "log_file": log_file}
     if torque_limits == "isaac":
         with open(deploy_path) as f:
             joint_names = yaml.safe_load(f)["joint_names"]
@@ -54,5 +55,6 @@ def generate_launch_description():
             "scene",
             default_value=os.path.expanduser("~/libs/mujoco_menagerie/unitree_h1/scene.xml"),
         ),
+        DeclareLaunchArgument("log_file", default_value=""),
         OpaqueFunction(function=launch_setup),
     ])

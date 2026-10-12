@@ -1,4 +1,6 @@
 #include <chrono>
+#include <fstream>
+#include <iomanip>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -23,6 +25,7 @@ public:
     const double base_height = declare_parameter<double>("base_height", 1.05);
     const std::vector<double> torque_limits =
       declare_parameter<std::vector<double>>("torque_limits", std::vector<double>{});
+    const std::string log_path = declare_parameter<std::string>("log_file", "");
     if (scene.empty() || deploy_path.empty()) {
       throw std::runtime_error("parameters 'scene' and 'deploy_config' are required");
     }
@@ -37,7 +40,7 @@ public:
 
     sim_ = std::make_unique<h1_mujoco_bridge::H1Sim>(scene, physics_dt);
     sim_->reset(names, default_pos, base_height);
-        const double start_height = sim_->lower_to_ground(0.001);
+    const double start_height = sim_->lower_to_ground(0.001);
     sim_->set_gains(names, kp, kd);
     if (!torque_limits.empty()) {
       sim_->set_torque_limits(names, torque_limits);
@@ -46,6 +49,9 @@ public:
       get_logger(), "H1 loaded: dt %.3f s x %d steps, torque limits from %s, start height %.3f m",
       physics_dt, decimation_, torque_limits.empty() ? "model" : "parameter", start_height);
 
+    if (!log_path.empty()) {
+      open_log(log_path);
+    }
 
     joint_msg_.name = sim_->joint_names();
 
@@ -63,6 +69,36 @@ public:
   }
 
 private:
+  void open_log(const std::string & path)
+  {
+    log_.open(path);
+    if (!log_) {
+      throw std::runtime_error("cannot open log file " + path);
+    }
+    log_ << std::setprecision(9) << "time,x,y,z,qw,qx,qy,qz";
+    for (const std::string & name : sim_->joint_names()) {
+      log_ << ',' << name;
+    }
+    log_ << ",vx_body,vy_body,vz_body\n";
+    RCLCPP_INFO(get_logger(), "logging state to %s", path.c_str());
+  }
+
+  void write_log_row()
+  {
+    const mjData & data = sim_->data();
+    log_ << sim_->time();
+    for (int i = 0; i < 7; ++i) {
+      log_ << ',' << data.qpos[i];
+    }
+    for (double q : sim_->joint_positions()) {
+      log_ << ',' << q;
+    }
+    for (double v : sim_->base_lin_vel_body()) {
+      log_ << ',' << v;
+    }
+    log_ << '\n';
+  }
+
   void on_command(const sensor_msgs::msg::JointState & msg)
   {
     started_ = true;
@@ -74,10 +110,13 @@ private:
     }
   }
 
-    void on_tick()
+  void on_tick()
   {
     if (started_) {
       sim_->step(decimation_);
+      if (log_.is_open()) {
+        write_log_row();
+      }
     } else {
       RCLCPP_INFO_THROTTLE(
         get_logger(), *get_clock(), 2000, "holding still until the first joint_command");
@@ -127,7 +166,8 @@ private:
 
   std::unique_ptr<h1_mujoco_bridge::H1Sim> sim_;
   int decimation_ = 1;
-bool started_ = false;
+  bool started_ = false;
+  std::ofstream log_;
   sensor_msgs::msg::JointState joint_msg_;
 
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
