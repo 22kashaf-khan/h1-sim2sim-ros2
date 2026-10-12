@@ -42,6 +42,11 @@ if(BUILD_TESTING)
   target_link_libraries(test_h1_sim h1_mujoco_bridge_core)
   target_compile_definitions(test_h1_sim PRIVATE
     H1_SCENE="${H1_MODEL_DIR}/scene.xml")
+
+  ament_add_gtest(test_h1_pd test/test_h1_pd.cpp)
+  target_link_libraries(test_h1_pd h1_mujoco_bridge_core)
+  target_compile_definitions(test_h1_pd PRIVATE
+    H1_SCENE="${H1_MODEL_DIR}/scene.xml")
 endif()
 
 ament_package()
