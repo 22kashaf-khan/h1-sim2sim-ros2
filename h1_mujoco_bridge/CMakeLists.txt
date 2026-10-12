@@ -25,6 +25,10 @@ set_target_properties(mujoco::mujoco PROPERTIES
   IMPORTED_LOCATION "${MUJOCO_LIBRARY}"
   INTERFACE_INCLUDE_DIRECTORIES "${MUJOCO_INCLUDE_DIR}")
 message(STATUS "MuJoCo: ${MUJOCO_LIBRARY}")
+add_library(h1_mujoco_bridge_core STATIC src/h1_sim.cpp)
+target_include_directories(h1_mujoco_bridge_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
+target_link_libraries(h1_mujoco_bridge_core PUBLIC mujoco::mujoco)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
@@ -32,6 +36,11 @@ if(BUILD_TESTING)
   ament_add_gtest(test_h1_model test/test_h1_model.cpp)
   target_link_libraries(test_h1_model mujoco::mujoco)
   target_compile_definitions(test_h1_model PRIVATE
+    H1_SCENE="${H1_MODEL_DIR}/scene.xml")
+
+  ament_add_gtest(test_h1_sim test/test_h1_sim.cpp)
+  target_link_libraries(test_h1_sim h1_mujoco_bridge_core)
+  target_compile_definitions(test_h1_sim PRIVATE
     H1_SCENE="${H1_MODEL_DIR}/scene.xml")
 endif()
 
