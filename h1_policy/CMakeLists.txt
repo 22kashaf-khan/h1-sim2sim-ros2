@@ -41,7 +41,8 @@ target_include_directories(h1_policy_core PUBLIC
 target_link_libraries(h1_policy_core PUBLIC yaml-cpp::yaml-cpp onnxruntime::onnxruntime)
 
 add_executable(policy_node src/policy_node.cpp)
-target_link_libraries(policy_node PUBLIC rclcpp::rclcpp ${sensor_msgs_TARGETS})
+target_link_libraries(policy_node PUBLIC rclcpp::rclcpp ${sensor_msgs_TARGETS} h1_policy_core)
+set_target_properties(policy_node PROPERTIES INSTALL_RPATH "${ONNXRUNTIME_ROOT}/lib")
 
 install(TARGETS policy_node
   DESTINATION lib/${PROJECT_NAME}

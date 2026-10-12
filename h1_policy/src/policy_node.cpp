@@ -1,8 +1,13 @@
 #include <chrono>
 #include <memory>
+#include <stdexcept>
+#include <string>
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
+
+#include "h1_policy/deploy_config.hpp"
+#include "h1_policy/onnx_policy.hpp"
 
 class PolicyNode : public rclcpp::Node
 {
@@ -10,7 +15,16 @@ public:
   PolicyNode()
   : Node("policy_node")
   {
-    RCLCPP_INFO(get_logger(), "policy_node started");
+    const std::string policy_dir = declare_parameter<std::string>("policy_dir", "");
+    if (policy_dir.empty()) {
+      throw std::runtime_error("parameter 'policy_dir' is required");
+    }
+    config_ = h1_policy::load_deploy_config(policy_dir + "/deploy.yaml");
+    policy_ = std::make_unique<h1_policy::OnnxPolicy>(
+      policy_dir + "/policy.onnx", config_.observation_dim, config_.action_dim);
+    RCLCPP_INFO(
+      get_logger(), "loaded %s: %d observations, %d joints, control period %.3f s",
+      config_.task.c_str(), config_.observation_dim, config_.action_dim, config_.control_period);
 
     joint_state_sub_ = create_subscription<sensor_msgs::msg::JointState>(
       "joint_states", rclcpp::SensorDataQoS(),
@@ -19,11 +33,11 @@ public:
     joint_command_pub_ = create_publisher<sensor_msgs::msg::JointState>(
       "joint_command", rclcpp::QoS(1));
 
-    control_timer_ = create_wall_timer(kControlPeriod, [this]() {on_control_tick();});
+    control_timer_ = create_wall_timer(
+      std::chrono::duration<double>(config_.control_period), [this]() {on_control_tick();});
   }
 
 private:
-  static constexpr std::chrono::milliseconds kControlPeriod{20};
   static constexpr std::chrono::milliseconds kStateTimeout{100};
 
   void on_joint_state(sensor_msgs::msg::JointState::ConstSharedPtr msg)
@@ -57,6 +71,9 @@ private:
     command.position = latest_joint_state_->position;
     joint_command_pub_->publish(command);
   }
+
+  h1_policy::DeployConfig config_;
+  std::unique_ptr<h1_policy::OnnxPolicy> policy_;
 
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
   sensor_msgs::msg::JointState::ConstSharedPtr latest_joint_state_;
