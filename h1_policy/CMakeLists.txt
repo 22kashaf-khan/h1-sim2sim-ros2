@@ -11,6 +11,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 set(ONNXRUNTIME_ROOT "$ENV{HOME}/libs/onnxruntime-linux-x64-1.31.0"
@@ -37,15 +39,13 @@ add_library(h1_policy_core STATIC
   src/deploy_config.cpp
   src/observation_builder.cpp
   src/onnx_policy.cpp)
-
 target_include_directories(h1_policy_core PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
 target_link_libraries(h1_policy_core PUBLIC yaml-cpp::yaml-cpp onnxruntime::onnxruntime)
 
-
-
 add_executable(policy_node src/policy_node.cpp)
-target_link_libraries(policy_node PUBLIC rclcpp::rclcpp ${sensor_msgs_TARGETS} h1_policy_core)
+target_link_libraries(policy_node PUBLIC
+  rclcpp::rclcpp ${sensor_msgs_TARGETS} ${geometry_msgs_TARGETS} ${nav_msgs_TARGETS} h1_policy_core)
 set_target_properties(policy_node PROPERTIES INSTALL_RPATH "${ONNXRUNTIME_ROOT}/lib")
 
 install(TARGETS policy_node
