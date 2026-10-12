@@ -32,11 +32,13 @@ set_target_properties(onnxruntime::onnxruntime PROPERTIES
   IMPORTED_LOCATION "${ONNXRUNTIME_LIBRARY}"
   INTERFACE_INCLUDE_DIRECTORIES "${ONNXRUNTIME_INCLUDE_DIR}")
 message(STATUS "ONNX Runtime ${ONNXRUNTIME_VERSION}: ${ONNXRUNTIME_LIBRARY}")
-add_library(h1_policy_core STATIC src/deploy_config.cpp)
+
+add_library(h1_policy_core STATIC
+  src/deploy_config.cpp
+  src/onnx_policy.cpp)
 target_include_directories(h1_policy_core PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
-target_link_libraries(h1_policy_core PUBLIC yaml-cpp::yaml-cpp)
-
+target_link_libraries(h1_policy_core PUBLIC yaml-cpp::yaml-cpp onnxruntime::onnxruntime)
 
 add_executable(policy_node src/policy_node.cpp)
 target_link_libraries(policy_node PUBLIC rclcpp::rclcpp ${sensor_msgs_TARGETS})
@@ -49,7 +51,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
   ament_add_gtest(test_onnx_policy test/test_onnx_policy.cpp)
-  target_link_libraries(test_onnx_policy onnxruntime::onnxruntime yaml-cpp::yaml-cpp)
+  target_link_libraries(test_onnx_policy h1_policy_core)
   target_compile_definitions(test_onnx_policy PRIVATE
     POLICY_DIR="${CMAKE_CURRENT_SOURCE_DIR}/policies/h1_flat_baseline")
 
