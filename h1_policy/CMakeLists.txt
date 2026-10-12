@@ -51,6 +51,9 @@ set_target_properties(policy_node PROPERTIES INSTALL_RPATH "${ONNXRUNTIME_ROOT}/
 install(TARGETS policy_node
   DESTINATION lib/${PROJECT_NAME}
 )
+install(DIRECTORY policies
+  DESTINATION share/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)

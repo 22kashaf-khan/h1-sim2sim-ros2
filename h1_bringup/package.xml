@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>h1_bringup</name>
+  <version>0.1.0</version>
+  <description>Launch files for the H1 sim-to-sim setup.</description>
+  <maintainer email="98372127+22kashaf-khan@users.noreply.github.com">Kashaf Khan</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>h1_policy</exec_depend>
+  <exec_depend>h1_mujoco_bridge</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
