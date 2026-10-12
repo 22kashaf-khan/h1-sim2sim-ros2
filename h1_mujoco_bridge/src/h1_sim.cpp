@@ -74,6 +74,20 @@ void H1Sim::reset(
   mj_forward(model_.get(), data_.get());
 }
 
+double H1Sim::lower_to_ground(double step)
+{
+  while (data_->qpos[2] > 0.0) {
+    data_->qpos[2] -= step;
+    mj_forward(model_.get(), data_.get());
+    if (data_->ncon > 0) {
+      data_->qpos[2] += step;
+      mj_forward(model_.get(), data_.get());
+      return data_->qpos[2];
+    }
+  }
+  throw std::runtime_error("robot never touched the ground");
+}
+
 void H1Sim::set_gains(
   const std::vector<std::string> & names, const std::vector<double> & kp,
   const std::vector<double> & kd)

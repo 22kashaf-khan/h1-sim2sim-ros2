@@ -20,6 +20,7 @@ public:
   void reset(
     const std::vector<std::string> & names, const std::vector<double> & positions,
     double base_height);
+  double lower_to_ground(double step);
 
   void set_gains(
     const std::vector<std::string> & names, const std::vector<double> & kp,
