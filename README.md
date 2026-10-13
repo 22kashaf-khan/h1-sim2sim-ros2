@@ -19,18 +19,29 @@ Isaac Lab (training) → ONNX export → C++ ROS2 policy node (ONNX Runtime) ⇄
 ## Results so far
 
 Policy `Isaac-Velocity-Flat-H1-v0` (own run), MuJoCo 3.15.0, H1 from MuJoCo Menagerie,
-real-time mode under WSL2. Single runs, informal measurements; to be quantified.
+real-time mode under WSL2. Scripted benchmark (`tools/ros/run_benchmark.sh`): 5 s zero,
+10 s forward 0.5 m/s, 10 s forward 1.0 m/s, 8 s turn 0.5 rad/s, 5 s zero.
+3 runs per setting; mean ± standard deviation over runs; the first 2 s of each phase are ignored
+(`tools/analysis/summarize_benchmark.py`).
 
-| | Run A: Isaac Lab torque limits | Run B: Menagerie torque limits |
+| Command | Run A: Isaac Lab torque limits | Run B: Menagerie torque limits |
 |---|---|---|
-| Torque limits | 300 Nm, ankles 100 Nm (as in training) | 18–300 Nm (ankles 40, elbows 18) |
-| Stands | ✅ ~0.90 m torso height | ✅ ~0.91 m |
-| Walks at 0.5 m/s command | ✅ 14.5 m forward | ✅ 17.1 m in ~35 s (≈ 0.49 m/s) |
-| Sideways drift | 0.2 m (~0.8°) | 2.8 m (~9°) |
+| Forward 0.5 m/s | 0.448 ± 0.039 m/s (90%) | 0.419 ± 0.001 m/s (84%) |
+| Forward 1.0 m/s | 0.916 ± 0.045 m/s (92%) | 0.885 ± 0.002 m/s (89%) |
+| Turn 0.5 rad/s | 0.481 ± 0.006 rad/s (96%) | 0.477 ± 0.000 rad/s (95%) |
+| Heading drift, walking straight | −0.004 to −0.008 rad/s | −0.007 to −0.008 rad/s |
+| Zero command (drift) | −0.031 ± 0.046 m/s | −0.063 ± 0.001 m/s |
+| Falls | 0 / 3 | 0 / 3 |
 
-The policy transfers to a different physics engine and tolerates much weaker,
-more realistic actuators than it was trained with; the weaker actuators mainly
-show up as heading drift.
+Run A uses the torque limits the policy was trained with (300 Nm, ankles 100 Nm); run B uses
+the Menagerie model's limits (18–300 Nm, ankles 40, elbows 18).
+
+- The policy transfers to MuJoCo without falls and tracks commands at 84–96%.
+- It walks consistently 8–16% slower than commanded: a sim-to-sim gap, plausibly from
+  different foot contacts and friction.
+- Realistic actuator limits cost 3–6 percentage points of speed, not stability.
+- With a zero command it keeps stepping and drifts slowly backwards.
+- Run A varies more between runs than run B; the cause is not yet known.
 
 ## Progress
 
