@@ -3,6 +3,12 @@
 Deploying a Unitree H1 locomotion policy trained in NVIDIA Isaac Lab through a
 C++ ROS2 node, controlling the robot in MuJoCo (sim-to-sim transfer).
 
+**Demo:** H1 walking forward, turning and stopping in MuJoCo, controlled by the C++ ROS2 policy node (run A, real time).
+
+https://github.com/user-attachments/assets/98d2dcd2-9b20-4929-a291-674341b8378c
+
+
+
 **Status:** the policy stands and walks in MuJoCo, driven by the C++ ROS2 nodes.
 Measurements (tracking error, robustness, latency) are in progress.
 
