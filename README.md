@@ -9,8 +9,8 @@ https://github.com/user-attachments/assets/98d2dcd2-9b20-4929-a291-674341b8378c
 
 
 
-**Status:** the policy stands and walks in MuJoCo, driven by the C++ ROS2 nodes.
-Measurements (tracking error, robustness, latency) are in progress.
+**Status:** complete. The policy stands and walks in MuJoCo through the C++ ROS2 nodes;
+tracking, robustness to actuator limits and timing are measured below.
 
 ## Pipeline
 
@@ -63,14 +63,24 @@ and as stale-input warnings), from ~140 ms to ~1.4 s depending on the session.
 A robot deployment would run on native Linux, ideally with a real-time kernel.
 
 
-## Progress
+## What was built
 
-- [x] Week 1: ROS2 node skeleton (C++): 50 Hz loop, joint states in/out by name, stale-data watchdog.
-- [x] Week 2: policy export and interface: ONNX model, deployment config generated from Isaac Lab, reference test cases.
-- [x] Week 3: C++ inference: ONNX Runtime in a ROS-free core library; C++ reproduces Python exactly.
-- [x] Week 4: MuJoCo bridge (C++): explicit PD per physics step, launch file, H1 stands and walks.
-- [ ] Lockstep mode with simulation time (repeatable runs)
-- [ ] Week 5: measured tracking error, drift, robustness to pushes, latency/jitter, video
+- ROS2 policy node (C++): 50 Hz control loop, joint data mapped by name, stale-data watchdog, timing log.
+- Policy export: ONNX model, deployment config generated from Isaac Lab, reference test cases.
+- C++ inference: ONNX Runtime in a ROS-free core library; reproduces the Python outputs exactly.
+- MuJoCo bridge (C++): explicit PD per physics step, body-frame state, start on the ground, state/command log.
+- Launch file, scripted benchmark, analysis tools, demo video.
+
+## Limitations and future work
+
+- Sim-to-sim only; no hardware. Real-time mode under WSL2, not a real-time OS; 3 runs per setting.
+- Push robustness not yet tested (the policy was not trained with pushes).
+- Lockstep mode with simulation time, for exactly repeatable runs.
+- Run A varies more between runs than run B; not yet explained.
+- With a zero command the policy keeps stepping and drifts backwards (~3–6 cm/s).
+- `cmd_vel` has no timeout: the last command persists.
+- Joint damping/armature not matched to Isaac Lab; NVIDIA's reference policy and a
+  power-regularized policy not yet compared through the same pipeline.
 
 ## Packages
 
