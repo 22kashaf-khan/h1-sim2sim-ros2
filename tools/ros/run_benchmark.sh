@@ -16,6 +16,6 @@ launch_pid=$!
 sleep 5
 "$(dirname "$0")/walk_sequence.sh"
 
-kill -INT "$launch_pid"
+kill -TERM "$launch_pid"
 wait "$launch_pid"
 echo "run finished: $log"
