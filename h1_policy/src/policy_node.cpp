@@ -1,5 +1,7 @@
 #include <chrono>
 #include <cstddef>
+#include <fstream>
+#include <iomanip>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -23,6 +25,7 @@ public:
   : Node("policy_node")
   {
     const std::string policy_dir = declare_parameter<std::string>("policy_dir", "");
+    const std::string timing_path = declare_parameter<std::string>("timing_log", "");
     if (policy_dir.empty()) {
       throw std::runtime_error("parameter 'policy_dir' is required");
     }
@@ -43,6 +46,16 @@ public:
     RCLCPP_INFO(
       get_logger(), "loaded %s: %d observations, %d joints, control period %.3f s",
       config_.task.c_str(), config_.observation_dim, config_.action_dim, config_.control_period);
+
+    if (!timing_path.empty()) {
+      timing_log_.open(timing_path);
+      if (!timing_log_) {
+        throw std::runtime_error("cannot open timing log " + timing_path);
+      }
+      timing_log_ << std::fixed << std::setprecision(3)
+                  << "elapsed_s,interval_ms,compute_us,tick_us,published\n";
+      RCLCPP_INFO(get_logger(), "logging timing to %s", timing_path.c_str());
+    }
 
     joint_state_sub_ = create_subscription<sensor_msgs::msg::JointState>(
       "joint_states", rclcpp::SensorDataQoS(),
@@ -73,29 +86,49 @@ public:
     joint_command_pub_ = create_publisher<sensor_msgs::msg::JointState>(
       "joint_command", rclcpp::QoS(1));
 
+    start_time_ = Clock::now();
+    last_tick_ = start_time_;
     control_timer_ = create_wall_timer(
       std::chrono::duration<double>(config_.control_period), [this]() {on_control_tick();});
   }
 
 private:
+  using Clock = std::chrono::steady_clock;
   static constexpr std::chrono::milliseconds kStateTimeout{100};
 
   void on_control_tick()
   {
+    const Clock::time_point tick_start = Clock::now();
+    double compute_us = 0.0;
+    const bool published = run_policy_step(compute_us);
+
+    if (timing_log_.is_open()) {
+      const Clock::time_point tick_end = Clock::now();
+      timing_log_ << std::chrono::duration<double>(tick_start - start_time_).count() << ','
+                  << std::chrono::duration<double, std::milli>(tick_start - last_tick_).count()
+                  << ',' << compute_us << ','
+                  << std::chrono::duration<double, std::micro>(tick_end - tick_start).count()
+                  << ',' << (published ? 1 : 0) << '\n';
+    }
+    last_tick_ = tick_start;
+  }
+
+  bool run_policy_step(double & compute_us)
+  {
     if (!latest_joint_state_ || !latest_imu_ || !latest_odom_) {
       RCLCPP_WARN_THROTTLE(
         get_logger(), *get_clock(), 2000, "waiting for joint_states, imu and odom");
-      return;
+      return false;
     }
     const rclcpp::Time tick_time = now();
     if (is_stale(last_joint_state_time_, tick_time, "joint_states") ||
       is_stale(last_imu_time_, tick_time, "imu") ||
       is_stale(last_odom_time_, tick_time, "odom"))
     {
-      return;
+      return false;
     }
     if (!fill_joints(*latest_joint_state_)) {
-      return;
+      return false;
     }
 
     const auto & q = latest_imu_->orientation;
@@ -105,8 +138,10 @@ private:
     const auto & v = latest_odom_->twist.twist.linear;
     state_.base_lin_vel = {v.x, v.y, v.z};
 
+    const Clock::time_point compute_start = Clock::now();
     const std::vector<float> & observation = builder_->build(state_, command_, last_action_);
     const std::vector<float> & action = policy_->infer(observation);
+    compute_us = std::chrono::duration<double, std::micro>(Clock::now() - compute_start).count();
     last_action_ = action;
 
     command_msg_.header.stamp = tick_time;
@@ -114,6 +149,7 @@ private:
       command_msg_.position[i] = config_.default_joint_pos[i] + config_.action_scale * action[i];
     }
     joint_command_pub_->publish(command_msg_);
+    return true;
   }
 
   bool is_stale(const rclcpp::Time & stamp, const rclcpp::Time & tick_time, const char * topic)
@@ -163,6 +199,10 @@ private:
   h1_policy::VelocityCommand command_;
   std::vector<float> last_action_;
   sensor_msgs::msg::JointState command_msg_;
+
+  std::ofstream timing_log_;
+  Clock::time_point start_time_;
+  Clock::time_point last_tick_;
 
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;

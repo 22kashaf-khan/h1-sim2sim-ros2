@@ -19,6 +19,7 @@ def launch_setup(context):
     torque_limits = LaunchConfiguration("torque_limits").perform(context)
     scene = LaunchConfiguration("scene").perform(context)
     log_file = LaunchConfiguration("log_file").perform(context)
+    timing_log = LaunchConfiguration("timing_log").perform(context)
 
     policy_dir = os.path.join(get_package_share_directory("h1_policy"), "policies", policy)
     deploy_path = os.path.join(policy_dir, "deploy.yaml")
@@ -41,7 +42,7 @@ def launch_setup(context):
         Node(
             package="h1_policy",
             executable="policy_node",
-            parameters=[{"policy_dir": policy_dir}],
+            parameters=[{"policy_dir": policy_dir, "timing_log": timing_log}],
             output="screen",
         ),
     ]
@@ -56,5 +57,6 @@ def generate_launch_description():
             default_value=os.path.expanduser("~/libs/mujoco_menagerie/unitree_h1/scene.xml"),
         ),
         DeclareLaunchArgument("log_file", default_value=""),
+        DeclareLaunchArgument("timing_log", default_value=""),
         OpaqueFunction(function=launch_setup),
     ])

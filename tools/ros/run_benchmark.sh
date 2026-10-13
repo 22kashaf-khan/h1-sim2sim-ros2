@@ -19,6 +19,7 @@ if pgrep -f "mujoco_bridge|policy_node" > /dev/null; then
 fi
 
 ros2 launch h1_bringup sim2sim.launch.py torque_limits:="$limits" log_file:="$log" \
+  timing_log:="${log%.csv}_timing.csv" \
   > "${log%.csv}_launch.txt" 2>&1 &
 launch_pid=$!
 
