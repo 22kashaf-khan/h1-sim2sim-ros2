@@ -43,6 +43,26 @@ the Menagerie model's limits (18–300 Nm, ankles 40, elbows 18).
 - With a zero command it keeps stepping and drifts slowly backwards.
 - Run A varies more between runs than run B; the cause is not yet known.
 
+
+## Timing (policy node)
+
+Measured inside `policy_node` with `std::chrono::steady_clock` (`timing_log` parameter,
+`tools/analysis/summarize_timing.py`); 5-minute run, real-time mode under WSL2.
+
+| Metric | Value |
+|---|---|
+| Compute (observation + ONNX inference) | median 86 µs, p99 240 µs, max 1.2 ms |
+| Share of the 20 ms control period | 0.43 % (median) |
+| Loop interval | median 20.00 ms, 98 % within 19.42–20.57 ms |
+| Late ticks (> 30 ms) | 2 of 14,892, both from WSL2 pauses (~140 ms) |
+
+Inference is not a bottleneck: single-threaded ONNX Runtime with pre-allocated buffers
+uses well under 1 % of the budget. The remaining timing risk is the platform: WSL2
+occasionally pauses the whole VM (both nodes stop together; seen on the steady clock
+and as stale-input warnings), from ~140 ms to ~1.4 s depending on the session.
+A robot deployment would run on native Linux, ideally with a real-time kernel.
+
+
 ## Progress
 
 - [x] Week 1: ROS2 node skeleton (C++): 50 Hz loop, joint states in/out by name, stale-data watchdog.
@@ -137,10 +157,10 @@ all in body frame and policy joint order.
   ran before the policy was connected (ROS2 discovery takes ~1 s; PD alone holds the
   pose for ~1 s). Starting on the ground and waiting for the first command fixed it,
   without any change to the policy or observation code.
-- **WSL2 stalls.** The 50 Hz loop shows ~0.5–1.4 s stalls at a regular interval of
-  about 33 s. Input and output stall together, and the robot survives 1.4 s gaps while
-  walking, which points to the whole WSL2 VM pausing (simulation included). The
-  stale-data watchdog stops commanding during stalls. To be quantified.
+- **WSL2 stalls.** The whole WSL2 VM occasionally pauses, stopping both nodes together.
+  Frequency and length vary by session: from ~0.5 s every ~33 s (up to ~1.4 s under load)
+  to two ~140 ms pauses in 5 minutes. The stale-data watchdog stops commanding during
+  them, and the robot survives because simulation pauses too. See "Timing" above.
 - ONNX Runtime 1.31.0's bundled CMake config points to `lib64/` and `include/onnxruntime/`,
   which don't exist in the release archive; the same applies to MuJoCo, which ships
   no CMake config. Both are located by `find_library`/`find_path` instead.
