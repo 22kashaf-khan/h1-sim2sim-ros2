@@ -12,6 +12,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 set(MUJOCO_ROOT "$ENV{HOME}/libs/mujoco-3.15.0"
@@ -37,8 +38,8 @@ target_link_libraries(h1_mujoco_bridge_core PUBLIC mujoco::mujoco)
 
 add_executable(mujoco_bridge src/bridge_node.cpp)
 target_link_libraries(mujoco_bridge PUBLIC
-  rclcpp::rclcpp ${sensor_msgs_TARGETS} ${nav_msgs_TARGETS} yaml-cpp::yaml-cpp
-  h1_mujoco_bridge_core)
+  rclcpp::rclcpp ${sensor_msgs_TARGETS} ${nav_msgs_TARGETS} ${geometry_msgs_TARGETS}
+  yaml-cpp::yaml-cpp h1_mujoco_bridge_core)
 set_target_properties(mujoco_bridge PROPERTIES INSTALL_RPATH "${MUJOCO_ROOT}/lib")
 
 install(TARGETS mujoco_bridge

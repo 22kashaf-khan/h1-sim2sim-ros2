@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -51,6 +52,10 @@ public:
 
     if (!log_path.empty()) {
       open_log(log_path);
+      // Only for the log: the commanded velocity, recorded on the simulation's clock.
+      cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
+        "cmd_vel", rclcpp::QoS(1),
+        [this](geometry_msgs::msg::Twist::ConstSharedPtr msg) {last_cmd_ = *msg;});
     }
 
     joint_msg_.name = sim_->joint_names();
@@ -79,7 +84,7 @@ private:
     for (const std::string & name : sim_->joint_names()) {
       log_ << ',' << name;
     }
-    log_ << ",vx_body,vy_body,vz_body\n";
+    log_ << ",vx_body,vy_body,vz_body,wz_body,cmd_vx,cmd_vy,cmd_wz\n";
     RCLCPP_INFO(get_logger(), "logging state to %s", path.c_str());
   }
 
@@ -96,6 +101,8 @@ private:
     for (double v : sim_->base_lin_vel_body()) {
       log_ << ',' << v;
     }
+    log_ << ',' << sim_->base_ang_vel_body()[2];
+    log_ << ',' << last_cmd_.linear.x << ',' << last_cmd_.linear.y << ',' << last_cmd_.angular.z;
     log_ << '\n';
   }
 
@@ -168,12 +175,14 @@ private:
   int decimation_ = 1;
   bool started_ = false;
   std::ofstream log_;
+  geometry_msgs::msg::Twist last_cmd_;
   sensor_msgs::msg::JointState joint_msg_;
 
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr command_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
